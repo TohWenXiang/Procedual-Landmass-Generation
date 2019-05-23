@@ -24,15 +24,41 @@ public static class Noise
      */
 
     /*
-     *      Input: 
-     *      map width = width of map, 
-     *      map height = height of map, 
-     *      scale = interger sampling point will give same result, so sampling point is divided using scale
+     *      Input:
      *      
-     *      Output: height map array of value between 0 and 1.
+     *      Map Width
+     *      It's the width of the map.
+     *      
+     *      Map Height
+     *      It's the height of the map;
+     *      
+     *      Scale
+     *      Having the scale in interger would cause the terrain to be the same, so only floats are allowed
+     *      To achieve that we divide it by scale.
+     *      
+     *      Octaves.
+     *      They are essentially height maps or waveforms. 
+     *      Multiple height maps are stack together for a more complex terrain. 
+     *      The more the octaves the more stages of increasingly finer details there are in a terrain.
+     *      Eg. Mountain, Boulders, Rocks, Stones, Pebbles, etc.
+     *      
+     *      Lacunarity
+     *      It controls the increase in frequency of octaves. 
+     *      As lacunarity increases, the frequency of each octaves gets affected in increasing intensity 
+     *      and thus having increasing details
+     *      [Range (1, n)]
+     *      
+     *      Persistance
+     *      It controls the decrease in amplitude of octaves
+     *      As Persistance increases, the amplitude of each octaves get affected in diminishing intensity.
+     *      The smaller the rock the less effect it has on the outline of the mountain
+     *      [Range (0, 1)]
+     *      
+     *      Output: 
+     *      height map array of value between 0 and 1.
      *      
      */
-    public static float[,] GenerateNoiseMap(int mapWidth, int mapHeight, float scale)
+    public static float[,] GenerateNoiseMap(int mapWidth, int mapHeight, float scale, int octaves, float persistance, float lacunarity)
     {
         float[,] noiseMap = new float[mapWidth, mapHeight];
 
@@ -42,21 +68,65 @@ public static class Noise
             scale = 0.0001f;
         }
 
+        //keep track of minimum and maximum noise height
+        float maxNoiseHeight = float.MinValue;
+        float minNoiseHeight = float.MaxValue;
+
         //loop through noise map
         for (int y = 0; y < mapHeight; y++)
         {
             for (int x = 0; x < mapWidth; x++)
             {
-                //sampling points for perlin noise
-                //avoid interger value so divide it using scale
-                float sampleX = x / scale;
-                float sampleY = y / scale;
+                //amplitude, frequency and noise height of the current point of the noise map
+                float amplitude = 1;
+                float frequency = 1;
+                float noiseHeight = 0;
 
-                //calculate the perlin noise for current point
-                float perlinValue = Mathf.PerlinNoise(sampleX, sampleY);
+                //calculate the noise height for each octaves
+                for (int i = 0; i < octaves; i++)
+                {
+                    //sampling points for perlin noise
+                    //avoid interger value so divide it using scale
+                    //frequency affects the closeness of each point on the noise map
+                    float sampleX = x / (scale * frequency);
+                    float sampleY = y / (scale * frequency);
 
-                //apply calculated perlin noise value to noise map
-                noiseMap[x, y] = perlinValue;
+                    //calculate the perlin noise for current point
+                    //perlin noise returns a value from 0 to 1, 
+                    //so multiplying by 2 and minusing 1 gives it a range of -1 to 1
+                    float perlinValue = (Mathf.PerlinNoise(sampleX, sampleY) * 2) - 1;
+
+                    //perlin value is affected by amplitude, 
+                    //result is added to the sum of all previous noise height value
+                    noiseHeight += perlinValue * amplitude;
+
+                    //with each increasing octaves, the amplitude is affected by the persistance of the noise map
+                    amplitude *= persistance;
+                    //same with lacunarity and frequency
+                    frequency *= lacunarity;
+                }
+
+                //keep track of minimum and maximum noise height
+                if (noiseHeight > maxNoiseHeight)
+                {
+                    maxNoiseHeight = noiseHeight;
+                }
+                else if (noiseHeight < minNoiseHeight)
+                {
+                    minNoiseHeight = noiseHeight;
+                }
+
+                //apply calculated noise height value to noise map
+                noiseMap[x, y] = noiseHeight;
+            }
+        }
+
+        //normalize noise map to return its range back to 0 to 1
+        for (int y = 0; y < mapHeight; y++)
+        {
+            for (int x = 0; x < mapWidth; x++)
+            {
+                noiseMap[x, y] = Mathf.InverseLerp(minNoiseHeight, maxNoiseHeight, noiseMap[x, y]);
             }
         }
 
