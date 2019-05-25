@@ -6,11 +6,6 @@ public class MapDisplay : MonoBehaviour
 {
     public Renderer textureRenderer;
 
-    public void Awake()
-    {
-        textureRenderer = GetComponent<Renderer>();
-    }
-
     public void DrawNoiseMap(float[,] noiseMap)
     {
         //get width and height of noisemap

@@ -58,19 +58,28 @@ public static class Noise
      *      height map array of value between 0 and 1.
      *      
      */
-    public static float[,] GenerateNoiseMap(int mapWidth, int mapHeight, float scale, int octaves, float persistance, float lacunarity)
+    public static float[,] GenerateNoiseMap(int mapWidth, int mapHeight, int seed, float scale, int octaves, float persistance, float lacunarity, Vector2 offset)
     {
         float[,] noiseMap = new float[mapWidth, mapHeight];
 
-        //handle divide by zero error
-        if (scale <= 0)
+        System.Random pseudoRandomNumberGenerator = new System.Random(seed);
+
+        Vector2[] octaveOffsets = new Vector2[octaves];
+
+        //calculating octave offsets using pseudo random number generation to get the same thing each time the same seed is used
+        for (int i = 0; i < octaves; i++)
         {
-            scale = 0.0001f;
+            float offsetX = pseudoRandomNumberGenerator.Next(-100000, 100000) + offset.x;
+            float offsetY = pseudoRandomNumberGenerator.Next(-100000, 100000) + offset.y ;
+            octaveOffsets[i] = new Vector2(offsetX, offsetY);
         }
 
         //keep track of minimum and maximum noise height
         float maxNoiseHeight = float.MinValue;
         float minNoiseHeight = float.MaxValue;
+
+        float halfwidth = mapWidth / 2f;
+        float halfHeight = mapHeight / 2f;
 
         //loop through noise map
         for (int y = 0; y < mapHeight; y++)
@@ -88,8 +97,9 @@ public static class Noise
                     //sampling points for perlin noise
                     //avoid interger value so divide it using scale
                     //frequency affects the closeness of each point on the noise map
-                    float sampleX = x / (scale * frequency);
-                    float sampleY = y / (scale * frequency);
+                    //adding offset to keep the value the same when the same seed is used
+                    float sampleX = (x - halfwidth) / (scale * frequency) + octaveOffsets[i].x;
+                    float sampleY = (y - halfHeight) / (scale * frequency) + octaveOffsets[i].y;
 
                     //calculate the perlin noise for current point
                     //perlin noise returns a value from 0 to 1, 
